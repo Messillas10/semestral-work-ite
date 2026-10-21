@@ -9,10 +9,10 @@ htmlcov/
 .venv/
 venv/
 
-# Downloaded dataset (third-party, no license: fetched at runtime, not redistributed)
-data/*.csv
-
 # Editors / OS
 .vscode/
 .idea/
 .DS_Store
+
+# Generated charts
+output/
