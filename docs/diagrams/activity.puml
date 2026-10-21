@@ -1,0 +1,34 @@
+@startuml activity
+title NBA MVP Predictor - program flow
+start
+:Parse command-line arguments;
+:Load CSV and check columns;
+if (Valid data?) then (no)
+  :Print error;
+  stop
+endif
+:Clean data and keep eligible players;
+switch (command)
+case (predict)
+  if (Season in data?) then (no)
+    :Print error;
+    stop
+  endif
+  :Train model on the other seasons;
+  :Predict Share and rank players;
+case (evaluate)
+  repeat
+    :Train on the other seasons;
+    :Predict season, compare with real MVP;
+  repeat while (more seasons?) is (yes)
+  :Compute top-1 and top-3 accuracy;
+case (profile)
+  :Compare MVPs vs candidates vs league;
+case (clusters)
+  :Standardise stats and run k-means;
+  :Count MVPs per cluster;
+endswitch
+:Print report;
+:Save charts to output/;
+stop
+@enduml

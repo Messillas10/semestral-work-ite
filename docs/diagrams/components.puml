@@ -1,0 +1,20 @@
+@startuml components
+title NBA MVP Predictor - components
+component "main.py" as main
+component "cli" as cli
+component "data" as data
+component "model" as model
+component "profiles" as profiles
+component "plots" as plots
+database "data/player_mvp_stats.csv" as csv
+folder "output/*.png" as out
+
+main --> cli
+cli --> data
+cli --> model
+cli --> profiles
+cli --> plots
+data --> csv : read
+profiles --> model : coefficients
+plots --> out : write
+@enduml
