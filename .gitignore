@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Virtual environment
+.venv/
+venv/
+
+# Downloaded dataset (third-party, no license: fetched at runtime, not redistributed)
+data/*.csv
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
