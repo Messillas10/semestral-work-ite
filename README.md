@@ -11,6 +11,20 @@ Analyses past NBA seasons to answer two questions:
 
 Inputs, outputs and program logic (with UML diagrams): [docs/design.md](docs/design.md)
 
+## Installation
+
+Requirements: Python 3 (tested with 3.14) and Git. The dataset is included in `data/`.
+
+```bash
+git clone https://github.com/Messillas10/semestral-work-ite.git
+cd semestral-work-ite
+python3 -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+Dependencies (`requirements.txt`): pandas (data), scikit-learn (regression and k-means), matplotlib (charts).
+
 ## License
 
 [MIT](LICENSE)
