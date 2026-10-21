@@ -9,6 +9,8 @@ Analyses past NBA seasons to answer two questions:
 
 > Work in progress — semestral work for the ITE course (CTU Prague).
 
+Inputs, outputs and program logic (with UML diagrams): [docs/design.md](docs/design.md)
+
 ## License
 
 [MIT](LICENSE)
