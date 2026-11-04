@@ -13,89 +13,137 @@ import pandas as pd
 from src.data import load_data, clean_data, eligible_players
 from src.model import FEATURES, predict_season, evaluate, top_k_hits, coefficients
 
-TESTS_DIR = os.path.dirname(__file__)
-TOY_CSV = os.path.join(TESTS_DIR, "toy_data.csv")
-REAL_CSV = os.path.join(TESTS_DIR, "..", "data", "player_mvp_stats.csv")
+TESTS_DIR = os.path.dirname(__file__)  # FOLDER OF THIS FILE
+TOY_CSV = os.path.join(TESTS_DIR, "toy_data.csv")  # TOY DATASET
+REAL_CSV = os.path.join(TESTS_DIR, "..", "data", "player_mvp_stats.csv")  # REAL DATASET
 
 
 def load(path):
-    """Load, clean and filter a CSV, like the program does."""
-    return eligible_players(clean_data(load_data(path)))
+    """Load, clean and filter the CSV"""
+
+    data = load_data(path)  # READ CSV
+
+    cleaned = clean_data(data)  # FILL EMPTY PERCENTAGES
+
+    eligible = eligible_players(cleaned)  # FILTER ELIGIBLE PLAYERS
+
+    return eligible
 
 
 def test_predict_season_format():
     """Only the asked season, ranks 1..n, sorted, no negative share."""
+
     result = predict_season(load(TOY_CSV), 2001)
+
     assert len(result) == 3  # 3 ELIGIBLE PLAYERS IN 2001
-    assert set(result["Year"]) == {2001}
-    assert list(result["Rank"]) == [1, 2, 3]
-    assert result["Predicted"].is_monotonic_decreasing
-    assert (result["Predicted"] >= 0).all()
+
+    assert set(result["Year"]) == {2001}  # NO OTHER SEASON
+
+    assert list(result["Rank"]) == [1, 2, 3]  # RANKS IN ORDER
+
+    assert result["Predicted"].is_monotonic_decreasing  # SORTED, BEST FIRST
+
+    assert (result["Predicted"] >= 0).all()  # CLIPPED AT 0
 
 
 def test_predict_season_unknown_season():
     """A season that is not in the data raises ValueError."""
+
     try:
-        predict_season(load(TOY_CSV), 1950)
+
+        predict_season(load(TOY_CSV), 1950)  # NOT IN THE TOY DATA
+
     except ValueError as error:
-        assert "1950" in str(error)
-        return
-    raise AssertionError("ValueError was not raised")
+
+        assert "1950" in str(error)  # MESSAGE NAMES THE SEASON
+
+        return  # EXPECTED ERROR -> PASS
+    
+    raise AssertionError("ValueError was not raised")  # NO ERROR -> FAIL
 
 
 def test_predict_season_no_leakage():
     """Changing the real Share of the predicted season changes nothing."""
+
     df = load(TOY_CSV)
-    before = predict_season(df, 2001)
-    changed = df.copy()
-    changed.loc[changed["Year"] == 2001, "Share"] = 0.5
-    after = predict_season(changed, 2001)
-    assert list(before["Player"]) == list(after["Player"])
-    assert list(before["Predicted"]) == list(after["Predicted"])
+
+    before = predict_season(df, 2001)  # NORMAL PREDICTION
+
+    changed = df.copy()  # DO NOT TOUCH df
+    changed.loc[changed["Year"] == 2001, "Share"] = 0.5  # FAKE ANSWERS FOR 2001
+
+    after = predict_season(changed, 2001)  # PREDICT AGAIN
+
+    assert list(before["Player"]) == list(after["Player"])  # SAME ORDER
+    assert list(before["Predicted"]) == list(after["Predicted"])  # SAME VALUES -> 2001 NOT USED
 
 
 def test_model_trains_on_candidates_only():
     """A player without votes in a training season does not affect the model."""
+
     df = load(TOY_CSV)
-    before = predict_season(df, 2001)
-    changed = df.copy()
-    gamma_2003 = (changed["Player"] == "Gamma Wing") & (changed["Year"] == 2003)
+
+    before = predict_season(df, 2001)  # NORMAL PREDICTION
+    changed = df.copy()  # DO NOT TOUCH df
+
+    gamma_2003 = (changed["Player"] == "Gamma Wing") & (changed["Year"] == 2003)  # ROW MASK
+
     changed.loc[gamma_2003, "PTS"] = 99.0  # SHARE 0 -> NOT A CANDIDATE
-    after = predict_season(changed, 2001)
-    assert list(before["Predicted"]) == list(after["Predicted"])
+
+    after = predict_season(changed, 2001)  # PREDICT AGAIN
+
+    assert list(before["Predicted"]) == list(after["Predicted"])  # SAME -> GAMMA NOT USED
 
 
 def test_evaluate_format():
     """One summary row per season and every eligible player predicted once."""
+
     df = load(TOY_CSV)
+
     summary, predictions = evaluate(df)
-    assert list(summary["Year"]) == [2001, 2002, 2003]
-    assert len(predictions) == len(df)
-    assert (summary["Correct"] == (summary["MVP rank"] == 1)).all()
-    assert list(summary["Real MVP"]) == ["Alpha Center", "Beta Guard", "Alpha Center"]
+
+    assert list(summary["Year"]) == [2001, 2002, 2003]  # ONE ROW PER SEASON
+
+    assert len(predictions) == len(df)  # EVERY ELIGIBLE PLAYER ONCE
+
+    assert (summary["Correct"] == (summary["MVP rank"] == 1)).all()  # CORRECT = RANK 1
+
+    assert list(summary["Real MVP"]) == ["Alpha Center", "Beta Guard", "Alpha Center"]  # HIGHEST SHARE
 
 
 def test_top_k_hits():
     """Counts the seasons with the real MVP at rank <= k."""
-    summary = pd.DataFrame({"MVP rank": [1, 2, 5]})
-    assert top_k_hits(summary, 1) == 1
-    assert top_k_hits(summary, 3) == 2
-    assert top_k_hits(summary, 10) == 3
+
+    summary = pd.DataFrame({"MVP rank": [1, 2, 5]})  # 3 FAKE SEASONS
+
+    assert top_k_hits(summary, 1) == 1  # ONLY THE 1
+
+    assert top_k_hits(summary, 3) == 2  # 1 AND 2
+
+    assert top_k_hits(summary, 10) == 3  # ALL
 
 
 def test_coefficients_format():
     """One weight per feature, largest absolute value first."""
+
     weights = coefficients(load(TOY_CSV))
-    assert sorted(weights.index) == sorted(FEATURES)
-    assert weights.abs().is_monotonic_decreasing
+
+    assert sorted(weights.index) == sorted(FEATURES)  # ONE WEIGHT PER FEATURE
+
+    assert weights.abs().is_monotonic_decreasing  # SORTED BY SIZE, SIGN IGNORED
 
 
 def test_real_data_documented_result():
-    """Regression test: the result documented in the README stays the same."""
+    """Regression test: the result documented in docs/tests.md stays the same."""
+
     df = load(REAL_CSV)
-    summary, _ = evaluate(df)
-    assert top_k_hits(summary, 1) == 21
-    assert top_k_hits(summary, 3) == 29
-    assert predict_season(df, 2016)["Player"].iloc[0] == "Stephen Curry"
+
+    summary, _ = evaluate(df)  # PREDICTIONS NOT NEEDED
+
+    assert top_k_hits(summary, 1) == 21  # TOP-1 21/31
+    assert top_k_hits(summary, 3) == 29  # TOP-3 29/31
+    assert predict_season(df, 2016)["Player"].iloc[0] == "Stephen Curry"  # KNOWN CASE
+
     weights = coefficients(df)
+    
     assert list(weights.index[:2]) == ["PTS", "W/L%"]  # SCORING AND TEAM WINS

@@ -12,14 +12,15 @@ All functions expect the DataFrame returned by data.eligible_players
 (cleaned, eligible players only).
 """
 
-import pandas as pd
-from sklearn.linear_model import LinearRegression
-from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import StandardScaler
+import pandas as pd  # DATAFRAMES
+from sklearn.linear_model import LinearRegression  # THE MODEL
+from sklearn.pipeline import make_pipeline  # CHAIN SCALER + MODEL
+from sklearn.preprocessing import StandardScaler  # MEAN 0, STD 1
 
-FEATURES = [
-    "G", "MP", "PTS", "AST", "TRB", "STL", "BLK", "TOV",
-    "FG%", "3P%", "FT%", "W/L%",
+FEATURES = [  # INPUT COLUMNS OF THE MODEL
+    "G", "MP", "PTS", "AST", "TRB", "STL", "BLK", "TOV",  # PER-GAME STATS
+    "FG%", "3P%", "FT%",  # SHOOTING EFFICIENCY
+    "W/L%",  # TEAM SUCCESS
 ]
 
 
@@ -35,10 +36,13 @@ def train_model(df):
     Returns:
         Fitted scikit-learn Pipeline (StandardScaler + LinearRegression).
     """
-    candidates = df[df["Share"] > 0]
-    model = make_pipeline(StandardScaler(), LinearRegression())
-    model.fit(candidates[FEATURES], candidates["Share"])
-    return model
+
+    candidates = df[df["Share"] > 0]  # ONLY PLAYERS WITH VOTES
+
+    model = make_pipeline(StandardScaler(), LinearRegression())  # FIRST SCALE THEN LINEAR REGRESSION
+    model.fit(candidates[FEATURES], candidates["Share"])  # X = STATS, Y = SHARE
+
+    return model  # FITTED PIPELINE
 
 
 def predict_season(df, season):
@@ -56,19 +60,28 @@ def predict_season(df, season):
     Raises:
         ValueError: if the season is not in df.
     """
-    if season not in df["Year"].values:
-        first, last = df["Year"].min(), df["Year"].max()
-        raise ValueError(f"Season {season} not in data ({first}-{last})")
 
-    model = train_model(df[df["Year"] != season])
-    test = df[df["Year"] == season]
+    if season not in df["Year"].values:  # UNKNOWN SEASON
 
-    result = test[["Player", "Pos", "Tm", "Year", "Share"]].copy()
-    result["Predicted"] = model.predict(test[FEATURES])
-    result = result.sort_values("Predicted", ascending=False)
-    result.insert(0, "Rank", range(1, len(result) + 1))
-    result["Predicted"] = result["Predicted"].clip(lower=0)
-    return result.reset_index(drop=True)
+        first, last = df["Year"].min(), df["Year"].max()  # RANGE FOR THE MESSAGE
+
+        raise ValueError(f"Season {season} not in data ({first}-{last})")  # CLEAR ERROR
+
+    model = train_model(df[df["Year"] != season])  # TRAIN ON THE OTHER SEASONS
+
+    test = df[df["Year"] == season]  # ALL ELIGIBLE PLAYERS OF THE SEASON
+
+    result = test[["Player", "Pos", "Tm", "Year", "Share"]].copy()  # COLUMNS TO SHOW
+
+    result["Predicted"] = model.predict(test[FEATURES])  # PREDICTED SHARE
+
+    result = result.sort_values("Predicted", ascending=False)  # BEST FIRST
+
+    result.insert(0, "Rank", range(1, len(result) + 1))  # RANK 1..N AS FIRST COLUMN
+
+    result["Predicted"] = result["Predicted"].clip(lower=0)  # AFTER RANKING: NEGATIVE -> 0
+
+    return result.reset_index(drop=True)  # INDEX 0..N-1
 
 
 def evaluate(df):
@@ -80,26 +93,31 @@ def evaluate(df):
     Returns:
         Tuple (summary, predictions):
         - summary: one row per season with Year, Predicted MVP, Real MVP,
-          MVP rank (rank the model gave to the real MVP) and Correct.
+        MVP rank (rank the model gave to the real MVP) and Correct.
         - predictions: predict_season of every season, joined.
     """
-    seasons = sorted(df["Year"].unique())
-    predictions = pd.concat(
-        [predict_season(df, season) for season in seasons], ignore_index=True
+
+    seasons = sorted(df["Year"].unique())  # 1991..2021
+    predictions = pd.concat(  # ONE TABLE WITH EVERY SEASON
+        [predict_season(df, season) for season in seasons], ignore_index=True  # LEAVE-ONE-SEASON-OUT
     )
 
-    rows = []
-    for season, group in predictions.groupby("Year"):
-        real_mvp = group.loc[group["Share"].idxmax()]
+    rows = []  # ONE DICT PER SEASON
+    for season, group in predictions.groupby("Year"):  # GROUP = PLAYERS OF ONE SEASON
+
+        real_mvp = group.loc[group["Share"].idxmax()]  # HIGHEST REAL SHARE = MVP
+
         rows.append({
             "Year": season,
             "Predicted MVP": group.iloc[0]["Player"],  # RANK 1
-            "Real MVP": real_mvp["Player"],
-            "MVP rank": real_mvp["Rank"],
+            "Real MVP": real_mvp["Player"],  # WHO WON
+            "MVP rank": real_mvp["Rank"],  # WHERE THE MODEL PUT HIM
         })
-    summary = pd.DataFrame(rows)
-    summary["Correct"] = summary["MVP rank"] == 1
-    return summary, predictions
+
+    summary = pd.DataFrame(rows)  # LIST OF DICTS -> TABLE
+    summary["Correct"] = summary["MVP rank"] == 1  # TRUE IF THE MODEL GOT IT
+    
+    return summary, predictions  # PREDICTIONS ARE REUSED BY THE APP
 
 
 def top_k_hits(summary, k):
@@ -112,7 +130,10 @@ def top_k_hits(summary, k):
     Returns:
         Number of seasons (int).
     """
-    return int((summary["MVP rank"] <= k).sum())
+
+    if k <= 0:
+        raise ValueError("k must be a positive integer") # K MUST BE POSITIVE
+    return int((summary["MVP rank"] <= k).sum())  # EACH TRUE COUNTS AS 1
 
 
 def coefficients(df):
@@ -127,6 +148,9 @@ def coefficients(df):
     Returns:
         Series indexed by feature, sorted by absolute value (largest first).
     """
-    model = train_model(df)
-    weights = pd.Series(model[-1].coef_, index=FEATURES)  # [-1] = LinearRegression STEP
-    return weights.sort_values(key=abs, ascending=False)
+
+    model = train_model(df)  # ALL SEASONS: NOTHING TO PREDICT HERE
+
+    weights = pd.Series(model[-1].coef_, index=FEATURES)  # [-1] = LINEAR REGRESSION STEP
+    
+    return weights.sort_values(key=abs, ascending=False)  # BIGGEST EFFECT FIRST, SIGN IGNORED

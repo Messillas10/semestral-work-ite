@@ -20,26 +20,35 @@ def run_tests():
     Returns:
         Number of tests that failed.
     """
-    failed = 0
-    total = 0
+
+    failed = 0  # FAIL + ERROR
+    total = 0  # TESTS RUN
+
     for module in TEST_MODULES:
-        for name in dir(module):
-            test = getattr(module, name)
-            if not (name.startswith("test_") and callable(test)):
+
+        for name in dir(module):  # EVERY NAME DEFINED IN THE MODULE
+            test = getattr(module, name)  # NAME -> OBJECT
+
+            if not (name.startswith("test_") and callable(test)):  # ONLY TEST FUNCTIONS
                 continue
             total += 1
+
             try:
-                test()
-                print(f"PASS  {module.__name__}.{name}")
-            except AssertionError as error:
+                test()  # RUN IT
+                print(f"PASS  {module.__name__}.{name}")  # NO EXCEPTION = PASS
+
+            except AssertionError as error:  # AN ASSERT WAS FALSE
                 failed += 1
                 print(f"FAIL  {module.__name__}.{name}  {error}")
+
             except Exception as error:  # UNEXPECTED CRASH, NOT A FAILED CHECK
                 failed += 1
                 print(f"ERROR {module.__name__}.{name}  {type(error).__name__}: {error}")
-    print(f"\n{total - failed}/{total} tests passed")
+
+    print(f"\n{total - failed}/{total} tests passed")  # SUMMARY
+    
     return failed
 
 
-if __name__ == "__main__":
-    sys.exit(1 if run_tests() else 0)
+if __name__ == "__main__":  # ONLY WHEN RUN, NOT WHEN IMPORTED
+    sys.exit(1 if run_tests() else 0)  # EXIT CODE 1 = SOMETHING FAILED
