@@ -25,6 +25,15 @@ pip install -r requirements.txt
 
 Dependencies (`requirements.txt`): pandas (data), scikit-learn (regression and k-means), matplotlib (charts).
 
+## Tests
+
+```bash
+python test_main.py
+```
+
+Runs every test in `tests/` and prints PASS / FAIL for each one. Approach and sample input/output pairs:
+[docs/tests.md](docs/tests.md)
+
 ## License
 
 [MIT](LICENSE)
