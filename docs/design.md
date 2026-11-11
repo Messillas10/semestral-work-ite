@@ -27,7 +27,7 @@ Command-line arguments:
 | `predict` | `SEASON`, `--top N` (default 5) | Predict the MVP race of one past season |
 | `evaluate` | — | Predict every season and measure how often the model is right |
 | `profile` | — | Compare MVP winners with other candidates and with the league |
-| `clusters` | `--k K` (default: chosen by silhouette) | Group players into archetypes, show where MVPs fall |
+| `clusters` | `--k K` (default 4) | Group players into archetypes, show where MVPs fall (silhouette shown as information) |
 
 Common options: `--data PATH` (CSV location, default `data/player_mvp_stats.csv`), `--output DIR` (where charts are saved, default `output/`).
 
@@ -60,8 +60,8 @@ Predicted MVP: Stephen Curry  | Real MVP: Stephen Curry  -> correct
    top-3 accuracy (real MVP among the 3 highest predictions).
 5. **Profile**: mean stats of MVP winners vs other vote receivers vs all eligible players; model
    coefficients show which stats raise the predicted share.
-6. **Clusters**: standardise the stats, run k-means, describe each cluster by its strongest stats,
-   count MVPs per cluster and per decade.
+6. **Clusters**: standardise 8 style stats (PTS, AST, TRB, STL, BLK, FG%, 3P%, FT%), run k-means (fixed `random_state`),
+   describe each cluster by its mean stats and count its MVPs.
 
 Activity diagram of the program flow:
 
