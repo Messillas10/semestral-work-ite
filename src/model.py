@@ -12,10 +12,10 @@ All functions expect the DataFrame returned by data.eligible_players
 (cleaned, eligible players only).
 """
 
-import pandas as pd  # DATAFRAMES
-from sklearn.linear_model import LinearRegression  # THE MODEL
-from sklearn.pipeline import make_pipeline  # CHAIN SCALER + MODEL
-from sklearn.preprocessing import StandardScaler  # MEAN 0, STD 1
+import pandas as pd
+from sklearn.linear_model import LinearRegression 
+from sklearn.pipeline import make_pipeline 
+from sklearn.preprocessing import StandardScaler
 
 FEATURES = [  # INPUT COLUMNS OF THE MODEL
     "G", "MP", "PTS", "AST", "TRB", "STL", "BLK", "TOV",  # PER-GAME STATS
