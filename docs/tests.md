@@ -17,12 +17,8 @@
 |---|---|---|
 | `load_data` | `tests/toy_data.csv` | 12 rows, seasons 2001, 2002, 2003 |
 | `load_data` | path that does not exist | `FileNotFoundError` |
-| `load_data` | CSV without the `Share` column | `ValueError` whose message names `Share` |
-| `clean_data` | toy data (4 empty `3P%`) | no empty `FG%` / `3P%` / `FT%`; Alpha Center 2001 has `3P%` = 0 |
-| `clean_data` | toy data | the input DataFrame still has its 4 empty values (works on a copy) |
-| `eligible_players` | toy data | 9 rows; Delta Bench 2001 (20 of 82 games), Zeta Rookie 2002 (40 of 82) and Delta Bench 2003 (10 of 50) removed |
-| `eligible_players` | Epsilon Forward 2002: 41 games, team 41-41 | kept (the limit `G >= (W + L) / 2` is inclusive) |
-| `eligible_players` | 2003, 50-game season | Gamma Wing (30 games) kept, Delta Bench (10 games) removed |
+| `clean_data` | toy data (4 empty `3P%`) | no empty `FG%` / `3P%` / `FT%` |
+| `eligible_players` | toy data | 9 rows (20/82, 40/82 and 10/50 games removed); Epsilon Forward with exactly 41/82 kept |
 
 ### `src/model.py`
 
@@ -32,11 +28,35 @@ dataset: if a change makes the documented result worse, the test fails.
 
 | Function | Input | Expected output |
 |---|---|---|
-| `predict_season` | toy data, season 2001 | 3 rows (eligible players of 2001), ranks 1, 2, 3, predicted share sorted and never negative |
-| `predict_season` | toy data, season 1950 | `ValueError` whose message names 1950 |
-| `predict_season` | toy data, season 2001, real `Share` of 2001 changed to 0.5 | same ranking and predictions (no leakage: the predicted season is not used for training) |
-| `predict_season` | toy data, season 2001, `PTS` of Gamma Wing 2003 (no votes) changed to 99 | same predictions (the model trains on vote receivers only) |
-| `evaluate` | toy data | one summary row per season (2001, 2002, 2003), real MVPs Alpha Center, Beta Guard, Alpha Center; 9 predictions (one per eligible player) |
-| `top_k_hits` | real-MVP ranks [1, 2, 5] | k = 1 → 1, k = 3 → 2, k = 10 → 3 |
-| `coefficients` | toy data | one weight per feature, sorted by absolute value |
-| `evaluate` + `coefficients` | real dataset (1991–2021) | top-1 **21/31**, top-3 **29/31**, Stephen Curry rank 1 in 2016, strongest features PTS and W/L% |
+| `predict_season` | toy data, season 2001 | only 2001, ranks 1, 2, 3, predicted share never negative |
+| `predict_season` | toy data, season 1950 | `ValueError` |
+| `predict_season` | toy data, season 2001, real `Share` of 2001 changed to 0.5 | same predictions (no leakage: the predicted season is not used for training) |
+| `evaluate` + `top_k_hits` | real dataset (1991–2021) | top-1 **21/31**, top-3 **29/31** |
+
+### `src/profiles.py`
+
+| Function | Input | Expected output |
+|---|---|---|
+| `mark_mvps` | toy data | MVPs Alpha Center 2001, Beta Guard 2002, Alpha Center 2003 |
+| `profile` | toy data | group sizes 3 MVPs, 3 other candidates, 9 league; mean `PTS` of MVPs 29.0 (= (30 + 28 + 29) / 3) |
+| `find_clusters` | toy data, k = 2, run twice | clusters {0, 1}, identical both times (fixed `random_state`) |
+| `find_clusters` + `describe_clusters` | real dataset, k = 4 | MVPs per cluster 0, 0, 11, 20 |
+
+### `src/plots.py`
+
+A chart cannot be compared with an `assert`: the tests check that a `Figure` with the expected number of bars is
+returned. The look was checked by eye on the real data.
+
+| Function | Input | Expected output |
+|---|---|---|
+| `season_chart` | toy prediction of 2001, top 2 | a `Figure` with 4 bars (2 players x predicted/real) |
+| `accuracy_chart` | toy `evaluate` summary | 3 bars (one per season) |
+
+### `src/cli.py`
+
+`main([...])` is called with the toy CSV (`--data`) and a temporary `--output` folder.
+
+| Command | Expected output |
+|---|---|
+| `predict 2001` | exit code 0, prints `Real MVP: Alpha Center` |
+| `predict 1950` | exit code 1, prints `Error: Season 1950 not in data (...)` |

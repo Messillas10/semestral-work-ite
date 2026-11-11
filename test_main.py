@@ -9,9 +9,9 @@ Usage:
 
 import sys
 
-from tests import test_data, test_model
+from tests import test_cli, test_data, test_model, test_plots, test_profiles
 
-TEST_MODULES = [test_data, test_model]
+TEST_MODULES = [test_data, test_model, test_profiles, test_plots, test_cli]
 
 
 def run_tests():
